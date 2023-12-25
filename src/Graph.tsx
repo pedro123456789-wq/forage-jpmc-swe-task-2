@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import { Table } from '@finos/perspective';
+import { Table } from '@finos/perspective'; //use finos npm library for data visualisation
 import { ServerRespond } from './DataStreamer';
 import './Graph.css';
 
@@ -14,7 +14,7 @@ interface IProps {
  * Perspective library adds load to HTMLElement prototype.
  * This interface acts as a wrapper for Typescript compiler.
  */
-interface PerspectiveViewerElement {
+interface PerspectiveViewerElement extends HTMLElement{
   load: (table: Table) => void,
 }
 
@@ -23,6 +23,8 @@ interface PerspectiveViewerElement {
  * parsed from its parent through data property.
  */
 class Graph extends Component<IProps, {}> {
+  //receives server response (obtained through the DataStreamer) in the props
+
   // Perspective table
   table: Table | undefined;
 
@@ -32,7 +34,23 @@ class Graph extends Component<IProps, {}> {
 
   componentDidMount() {
     // Get element to attach the table from the DOM.
-    const elem: PerspectiveViewerElement = document.getElementsByTagName('perspective-viewer')[0] as unknown as PerspectiveViewerElement;
+    const elem = document.getElementsByTagName('perspective-viewer')[0] as unknown as PerspectiveViewerElement;
+
+    //add html attributes to the graph element
+    elem.setAttribute('view', 'y_line'); //define the type of graph to visualise
+    elem.setAttribute('column-pivots', '["stock"]'); //field to differentiate between the lines for the two stocks + add labels
+    elem.setAttribute('row-pivots', '["timestamp"]'); //x-axis data
+    elem.setAttribute('columns', '["top_ask_price"]'); //dictionary key used to plot the data along the y-axis
+    elem.setAttribute('aggregates', 
+                      `
+                        {"stock": "distinct count", 
+                        "top_ask_price": "avg", 
+                        "top_bid_price": "avg", 
+                        "timestamp": "distinct count"}
+                      `); //use to combine repated datapoint
+                          //data point is determined to be unique if the values of 'stock' and 'timestamp' are both unique
+                          //for two non-unique data points, they are combined into a single data point with the average values for
+                          //top_ask_price and top_bid_price
 
     const schema = {
       stock: 'string',
@@ -53,7 +71,10 @@ class Graph extends Component<IProps, {}> {
   }
 
   componentDidUpdate() {
+    console.log('db');
     // Everytime the data props is updated, insert the data into Perspective table
+    console.log(this.props);
+
     if (this.table) {
       // As part of the task, you need to fix the way we update the data props to
       // avoid inserting duplicated entries into Perspective table again.
